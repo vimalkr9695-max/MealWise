@@ -18,72 +18,72 @@ class _CalendarPageState extends State<CalendarPage> {
   DateTime _displayMonth = DateTime(DateTime.now().year, DateTime.now().month);
   DateTime? _selectedDay;
  
-  List<Meal> _mealsForDay(DateTime day) {
-    return widget.allMeals.where((m) {
-      return m.createdAt.year == day.year &&
-          m.createdAt.month == day.month &&
-          m.createdAt.day == day.day;
-    }).toList();
-  }
- 
-  double _totalForDay(DateTime day) {
-    return _mealsForDay(day).fold(0.0, (s, m) => s + m.amount);
-  }
- 
-  DateTime? _highestSpendDay() {
-    final days = <String, double>{};
+  Map<int, List<Meal>> _groupMonthMeals() {
+    final map = <int, List<Meal>>{};
     for (final m in widget.allMeals) {
       if (m.createdAt.year == _displayMonth.year &&
           m.createdAt.month == _displayMonth.month) {
-        final key =
-            '${m.createdAt.year}-${m.createdAt.month}-${m.createdAt.day}';
-        days[key] = (days[key] ?? 0) + m.amount;
+        map.putIfAbsent(m.createdAt.day, () => []).add(m);
       }
     }
-    if (days.isEmpty) return null;
-    final maxKey = days.entries.reduce((a, b) => a.value > b.value ? a : b).key;
-    final parts = maxKey.split('-');
-    return DateTime(int.parse(parts[0]), int.parse(parts[1]), int.parse(parts[2]));
+    return map;
   }
- 
-  double _monthTotal() {
-    return widget.allMeals
-        .where((m) =>
-            m.createdAt.year == _displayMonth.year &&
-            m.createdAt.month == _displayMonth.month)
-        .fold(0.0, (s, m) => s + m.amount);
-  }
- 
-  int _daysTracked() {
-    final days = <String>{};
-    for (final m in widget.allMeals) {
-      if (m.createdAt.year == _displayMonth.year &&
-          m.createdAt.month == _displayMonth.month) {
-        days.add('${m.createdAt.day}');
-      }
+
+  List<Meal> _mealsForDay(Map<int, List<Meal>> grouped, DateTime day) {
+    if (day.year != _displayMonth.year || day.month != _displayMonth.month) {
+      return const [];
     }
-    return days.length;
+    return grouped[day.day] ?? const [];
   }
- 
-  double _avgPerDay() {
-    final tracked = _daysTracked();
-    return tracked == 0 ? 0 : _monthTotal() / tracked;
+
+  double _totalForDay(Map<int, List<Meal>> grouped, DateTime day) {
+    return _mealsForDay(grouped, day).fold(0.0, (s, m) => s + m.amount);
   }
- 
-  double _highestDayAmount() {
-    final hd = _highestSpendDay();
+
+  int? _highestSpendDayNum(Map<int, List<Meal>> grouped) {
+    if (grouped.isEmpty) return null;
+    double bestTotal = -1;
+    int? bestDay;
+    grouped.forEach((day, meals) {
+      final total = meals.fold(0.0, (s, m) => s + m.amount);
+      if (total > bestTotal) {
+        bestTotal = total;
+        bestDay = day;
+      }
+    });
+    return bestDay;
+  }
+
+  double _monthTotal(Map<int, List<Meal>> grouped) {
+    var total = 0.0;
+    for (final meals in grouped.values) {
+      total += meals.fold(0.0, (s, m) => s + m.amount);
+    }
+    return total;
+  }
+
+  int _daysTracked(Map<int, List<Meal>> grouped) => grouped.length;
+
+  double _avgPerDay(Map<int, List<Meal>> grouped) {
+    final tracked = _daysTracked(grouped);
+    return tracked == 0 ? 0 : _monthTotal(grouped) / tracked;
+  }
+
+  double _highestDayAmount(Map<int, List<Meal>> grouped) {
+    final hd = _highestSpendDayNum(grouped);
     if (hd == null) return 0;
-    return _totalForDay(hd);
+    return grouped[hd]!.fold(0.0, (s, m) => s + m.amount);
   }
  
   @override
   Widget build(BuildContext context) {
+    final grouped = _groupMonthMeals();
     final firstDay =
         DateTime(_displayMonth.year, _displayMonth.month, 1);
     final daysInMonth =
         DateTime(_displayMonth.year, _displayMonth.month + 1, 0).day;
     final startWeekday = firstDay.weekday % 7;
-    final highestDay = _highestSpendDay();
+    final highestDayNum = _highestSpendDayNum(grouped);
     final today = DateTime.now();
  
     final cells = <DateTime?>[];
@@ -98,7 +98,6 @@ class _CalendarPageState extends State<CalendarPage> {
         padding: const EdgeInsets.all(10),
         child: Column(
           children: [
-            // Calendar Header
             Padding(
               padding: const EdgeInsets.all(10),
               child: Row(
@@ -106,7 +105,7 @@ class _CalendarPageState extends State<CalendarPage> {
                 children: [
                   Text(
                     DateFormat('MMMM yyyy').format(_displayMonth),
-                    style: GoogleFonts.playfairDisplay(
+                    style: GoogleFonts.dmSerifDisplay(
                       fontSize: 32,
                       fontWeight: FontWeight.bold,
                       color: const Color(0xFFF0EDE6),
@@ -135,7 +134,6 @@ class _CalendarPageState extends State<CalendarPage> {
               ),
             ),
  
-            // Day of week labels
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: ['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d) {
@@ -157,7 +155,6 @@ class _CalendarPageState extends State<CalendarPage> {
  
             const SizedBox(height: 8),
  
-            // Calendar Grid
             ...List.generate(cells.length ~/ 7, (row) {
               return Padding(
                 padding: const EdgeInsets.only(bottom: 20),
@@ -169,14 +166,13 @@ class _CalendarPageState extends State<CalendarPage> {
                       return const SizedBox(width: 30, height: 34);
                     }
  
-                    final hasMeals = _mealsForDay(day).isNotEmpty;
+                    final hasMeals = _mealsForDay(grouped, day).isNotEmpty;
                     final isSelected = _selectedDay != null &&
                         _selectedDay!.year == day.year &&
                         _selectedDay!.month == day.month &&
                         _selectedDay!.day == day.day;
-                    final isHighest = highestDay != null &&
-                        highestDay.day == day.day &&
-                        highestDay.month == day.month;
+                    final isHighest = highestDayNum != null &&
+                        highestDayNum == day.day;
                     final isToday = today.year == day.year &&
                         today.month == day.month &&
                         today.day == day.day;
@@ -271,8 +267,8 @@ class _CalendarPageState extends State<CalendarPage> {
                         ),
                       ),
                       const SizedBox(height: 6),
-                      Text('₹${_monthTotal().toStringAsFixed(1)}', // ✅ INR
-                        style: GoogleFonts.playfairDisplay(
+                      Text('₹${_monthTotal(grouped).toStringAsFixed(1)}',
+                        style: GoogleFonts.dmSerifDisplay(
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
                           color: const Color(0xFFD4A853),
@@ -280,7 +276,7 @@ class _CalendarPageState extends State<CalendarPage> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        '${DateFormat('MMMM yyyy').format(_displayMonth)} · ${_daysTracked()} days tracked',
+                        '${DateFormat('MMMM yyyy').format(_displayMonth)} · ${_daysTracked(grouped)} days tracked',
                         style: GoogleFonts.dmSans(
                           fontSize: 9,
                           color: const Color(0xFF7A6030),
@@ -291,9 +287,9 @@ class _CalendarPageState extends State<CalendarPage> {
                   Row(
                     children: [
                       _miniBadge(
-                          '₹${_highestDayAmount().toStringAsFixed(0)}', 'Highest'), // ✅ INR
+                          '₹${_highestDayAmount(grouped).toStringAsFixed(0)}', 'Highest'),
                       const SizedBox(width: 10),
-                      _miniBadge('₹${_avgPerDay().toStringAsFixed(0)}', 'Avg/day'), // ✅ INR
+                      _miniBadge('₹${_avgPerDay(grouped).toStringAsFixed(0)}', 'Avg/day'),
                     ],
                   ),
                 ],
@@ -302,7 +298,7 @@ class _CalendarPageState extends State<CalendarPage> {
  
             const SizedBox(height: 16),
  
-            if (_selectedDay != null) _buildSelectedDayPanel(),
+            if (_selectedDay != null) _buildSelectedDayPanel(grouped),
  
             const SizedBox(height: 20),
           ],
@@ -364,9 +360,9 @@ class _CalendarPageState extends State<CalendarPage> {
     );
   }
  
-  Widget _buildSelectedDayPanel() {
-    final meals = _mealsForDay(_selectedDay!);
-    final total = _totalForDay(_selectedDay!);
+  Widget _buildSelectedDayPanel(Map<int, List<Meal>> grouped) {
+    final meals = _mealsForDay(grouped, _selectedDay!);
+    final total = _totalForDay(grouped, _selectedDay!);
     final dateStr = DateFormat('EEEE, MMMM d').format(_selectedDay!);
  
     return Container(
@@ -422,7 +418,7 @@ class _CalendarPageState extends State<CalendarPage> {
                         color: const Color(0xFFF0EDE6),
                       ),
                     ),
-                    Text('₹${m.amount.toStringAsFixed(2)}', // ✅ INR
+                    Text('₹${m.amount.toStringAsFixed(2)}',
                       style: GoogleFonts.dmSans(
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
@@ -443,8 +439,8 @@ class _CalendarPageState extends State<CalendarPage> {
                   color: const Color(0xFF9B9890),
                 ),
               ),
-              Text('₹${total.toStringAsFixed(2)}', // ✅ INR
-                style: GoogleFonts.playfairDisplay(
+              Text('₹${total.toStringAsFixed(2)}',
+                style: GoogleFonts.dmSerifDisplay(
                   fontSize: 20,
                   color: const Color(0xFFF0EDE6),
                 ),

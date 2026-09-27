@@ -13,12 +13,14 @@ class LogMealPage extends StatefulWidget {
 
 class _LogMealPageState extends State<LogMealPage> {
   String _selectedType = 'Breakfast';
+  String? _selectedCategory;
   final _nameController = TextEditingController();
   final _locationController = TextEditingController();
   final _amountController = TextEditingController();
   final _noteController = TextEditingController();
   TimeOfDay _selectedTime = TimeOfDay.now();
   final List<String> _types = ['Breakfast', 'Lunch', 'Dinner', 'Snack'];
+  final List<String> _categories = ['Fruits', 'Vegetables', 'Protein', 'Grains'];
 
   @override
   void dispose() {
@@ -60,6 +62,17 @@ class _LogMealPageState extends State<LogMealPage> {
       return;
     }
 
+    if (_selectedCategory == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Please select a food category',
+              style: GoogleFonts.dmSans(color: Colors.white)),
+          backgroundColor: const Color(0xFF1A1A18),
+        ),
+      );
+      return;
+    }
+
     final now = DateTime.now();
     final mealTime = DateTime(
       now.year,
@@ -77,6 +90,7 @@ class _LogMealPageState extends State<LogMealPage> {
       amount: double.tryParse(_amountController.text) ?? 0.0,
       note: _noteController.text.trim(),
       createdAt: mealTime,
+      category: _selectedCategory,
     );
 
     await FirestoreService.addMeal(meal);
@@ -163,6 +177,53 @@ class _LogMealPageState extends State<LogMealPage> {
                               type,
                               style: GoogleFonts.dmSans(
                                 fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: active
+                                    ? const Color(0xFFD4A853)
+                                    : const Color(0xFF9B9890),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+
+              const SizedBox(height: 20),
+
+              _buildLabel('FOOD CATEGORY'),
+              const SizedBox(height: 15),
+              Row(
+                children: _categories.map((category) {
+                  final active = _selectedCategory == category;
+                  return Expanded(
+                    child: Padding(
+                      padding: EdgeInsets.only(
+                          right: category != 'Grains' ? 8 : 0),
+                      child: GestureDetector(
+                        onTap: () =>
+                            setState(() => _selectedCategory = category),
+                        child: Container(
+                          height: 46,
+                          decoration: BoxDecoration(
+                            color: active
+                                ? const Color(0x1FD4A853)
+                                : const Color(0x1F1A1A18),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                              color: active
+                                  ? const Color(0xFFD4A853)
+                                  : const Color(0xFF2E2E2B),
+                            ),
+                          ),
+                          child: Center(
+                            child: Text(
+                              category,
+                              textAlign: TextAlign.center,
+                              style: GoogleFonts.dmSans(
+                                fontSize: 11,
                                 fontWeight: FontWeight.w600,
                                 color: active
                                     ? const Color(0xFFD4A853)
@@ -345,7 +406,7 @@ class _LogMealPageState extends State<LogMealPage> {
         children: [
           Text(
             '₹ ',
-            style: GoogleFonts.playfairDisplay(
+            style: GoogleFonts.dmSerifDisplay(
               fontSize: 22,
               fontWeight: FontWeight.bold,
               color: const Color(0xFFD4A853),
@@ -356,7 +417,7 @@ class _LogMealPageState extends State<LogMealPage> {
               controller: _amountController,
               keyboardType:
                   const TextInputType.numberWithOptions(decimal: true),
-              style: GoogleFonts.playfairDisplay(
+              style: GoogleFonts.dmSerifDisplay(
                 fontSize: 22,
                 fontWeight: FontWeight.bold,
                 color: const Color(0xFFD4A853),

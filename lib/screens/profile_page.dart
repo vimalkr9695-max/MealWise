@@ -35,7 +35,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
   Future<void> _loadReminders() async {
     final r = await Storage.loadReminders();
-    setState(() => _reminders = r);
+    if (mounted) setState(() => _reminders = r);
   }
 
   Future<void> _changeBudget() async {
@@ -48,7 +48,7 @@ class _ProfilePageState extends State<ProfilePage> {
         backgroundColor: const Color(0xFF1A1A18),
         title: Text(
           'Change Budget',
-          style: GoogleFonts.playfairDisplay(
+          style: GoogleFonts.dmSerifDisplay(
               color: const Color(0xFFF0EDE6)),
         ),
         content: TextField(
@@ -110,7 +110,7 @@ class _ProfilePageState extends State<ProfilePage> {
             padding: const EdgeInsets.all(16),
             child: Text(
               'Meal History',
-              style: GoogleFonts.playfairDisplay(
+              style: GoogleFonts.dmSerifDisplay(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
                 color: const Color(0xFFF0EDE6),
@@ -165,7 +165,7 @@ class _ProfilePageState extends State<ProfilePage> {
         backgroundColor: const Color(0xFF1A1A18),
         title: Text(
           'Reset All Data',
-          style: GoogleFonts.playfairDisplay(
+          style: GoogleFonts.dmSerifDisplay(
               color: const Color(0xFFF0EDE6)),
         ),
         content: Text(
@@ -192,7 +192,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
     if (confirm == true) {
       await FirestoreService.deleteAllMeals();
-      await Storage.clearAll(); // clears budget/prefs locally
+      await Storage.clearAll();
       widget.onDataChanged();
     }
   }
@@ -202,6 +202,9 @@ class _ProfilePageState extends State<ProfilePage> {
     final initial = widget.userName.isNotEmpty
         ? widget.userName[0].toUpperCase()
         : 'A';
+
+    final photoUrl = AuthService.currentUser?.photoURL;
+    final email = AuthService.currentUser?.email ?? 'no email';
 
     return SafeArea(
       child: SingleChildScrollView(
@@ -216,7 +219,7 @@ class _ProfilePageState extends State<ProfilePage> {
               children: [
                 Text(
                   'Profile',
-                  style: GoogleFonts.playfairDisplay(
+                  style: GoogleFonts.dmSerifDisplay(
                     fontSize: 22,
                     fontWeight: FontWeight.bold,
                     color: const Color(0xFFF0EDE6),
@@ -263,17 +266,41 @@ class _ProfilePageState extends State<ProfilePage> {
                       ),
                     ),
                     child: ClipOval(
-                      child: AuthService.currentUser?.photoURL != null
+                      child: photoUrl != null
                           ? Image.network(
-                              AuthService.currentUser!.photoURL!,
+                              photoUrl,
                               fit: BoxFit.cover,
                               width: 80,
                               height: 80,
+                              gaplessPlayback: true,
+                              loadingBuilder: (context, child, progress) {
+                                if (progress == null) return child;
+                                return Center(
+                                  child: Text(
+                                    initial,
+                                    style: GoogleFonts.dmSerifDisplay(
+                                      fontSize: 32,
+                                      fontWeight: FontWeight.bold,
+                                      color: const Color(0xFFD4A853),
+                                    ),
+                                  ),
+                                );
+                              },
+                              errorBuilder: (_, __, ___) => Center(
+                                child: Text(
+                                  initial,
+                                  style: GoogleFonts.dmSerifDisplay(
+                                    fontSize: 32,
+                                    fontWeight: FontWeight.bold,
+                                    color: const Color(0xFFD4A853),
+                                  ),
+                                ),
+                              ),
                             )
                           : Center(
                               child: Text(
                                 initial,
-                                style: GoogleFonts.playfairDisplay(
+                                style: GoogleFonts.dmSerifDisplay(
                                   fontSize: 32,
                                   fontWeight: FontWeight.bold,
                                   color: const Color(0xFFD4A853),
@@ -285,7 +312,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   const SizedBox(height: 10),
                   Text(
                     widget.userName,
-                    style: GoogleFonts.playfairDisplay(
+                    style: GoogleFonts.dmSerifDisplay(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
                       color: const Color(0xFFF0EDE6),
@@ -293,7 +320,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    AuthService.currentUser?.email ?? 'no email',
+                    email,
                     style: GoogleFonts.dmSans(
                       fontSize: 12,
                       color: const Color(0xFF9B9890),
@@ -333,7 +360,7 @@ class _ProfilePageState extends State<ProfilePage> {
                       const SizedBox(height: 6),
                       Text(
                         '₹${widget.budget.toStringAsFixed(2)}',
-                        style: GoogleFonts.playfairDisplay(
+                        style: GoogleFonts.dmSerifDisplay(
                           fontSize: 26,
                           fontWeight: FontWeight.bold,
                           color: const Color(0xFFD4A853),

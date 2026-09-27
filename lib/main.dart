@@ -29,60 +29,112 @@ class MyApp extends StatelessWidget {
           displayColor: const Color(0xFFF0EDE6),
         ),
       ),
-      // StreamBuilder listens to auth state
-      // Auto sends to home if logged in, login if not
-      home: StreamBuilder<User?>(
-        stream: FirebaseAuth.instance.authStateChanges(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const _SplashScreen();
-          }
-          if (snapshot.hasData) {
-            return const HomePage();
-          }
-          return const LoginPage();
-        },
-      ),
+      home: const _AuthGate(),
     );
   }
 }
 
-class _SplashScreen extends StatelessWidget {
-  const _SplashScreen();
+class _AuthGate extends StatefulWidget {
+  const _AuthGate();
+
+  @override
+  State<_AuthGate> createState() => _AuthGateState();
+}
+
+class _AuthGateState extends State<_AuthGate> {
+  bool _splashDone = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<User?>(
+      stream: FirebaseAuth.instance.authStateChanges(),
+      builder: (context, snapshot) {
+        // If splash hasn't finished, ALWAYS show splash — no matter what.
+        if (!_splashDone) {
+          return _SplashScreen(
+            onFinished: () {
+              if (mounted) setState(() => _splashDone = true);
+            },
+          );
+        }
+
+        // Splash is done. Now wait for auth to resolve.
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const _SplashScreen(); // stay on splash, no callback
+        }
+
+        if (snapshot.hasData) {
+          return const HomePage();
+        }
+        return const LoginPage();
+      },
+    );
+  }
+}
+
+class _SplashScreen extends StatefulWidget {
+  final VoidCallback? onFinished;
+  const _SplashScreen({this.onFinished});
+
+  @override
+  State<_SplashScreen> createState() => _SplashScreenState();
+}
+
+class _SplashScreenState extends State<_SplashScreen>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _reveal;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    );
+    _reveal = CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeOutCubic,
+    );
+
+    _controller.forward().whenComplete(() {
+      // Hold on the fully-revealed text for a moment, then notify parent.
+      Future.delayed(const Duration(milliseconds: 700), () {
+        widget.onFinished?.call();
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFF0F0F0E),
       body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 64, height: 64,
-              decoration: BoxDecoration(
-                color: const Color(0xFFD4A853).withOpacity(0.15),
-                shape: BoxShape.circle,
-                border: Border.all(
-                    color: const Color(0xFFD4A853).withOpacity(0.4)),
+        child: AnimatedBuilder(
+          animation: _reveal,
+          builder: (context, child) {
+            return ClipRect(
+              child: Align(
+                alignment: Alignment.centerLeft,
+                widthFactor: _reveal.value,
+                child: child,
               ),
-              child: const Icon(Icons.restaurant_outlined,
-                  color: Color(0xFFD4A853), size: 30),
+            );
+          },
+          child: Text(
+            'MealWise',
+            style: GoogleFonts.dmSerifDisplay(
+              fontSize: 44,
+              color: const Color(0xFFD4A853),
+              height: 1.0,
             ),
-            const SizedBox(height: 16),
-            Text('Meal Tracker',
-              style: GoogleFonts.playfairDisplay(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: const Color(0xFFF0EDE6),
-              ),
-            ),
-            const SizedBox(height: 24),
-            const CircularProgressIndicator(
-              color: Color(0xFFD4A853),
-              strokeWidth: 2,
-            ),
-          ],
+          ),
         ),
       ),
     );

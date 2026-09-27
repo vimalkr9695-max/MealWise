@@ -21,6 +21,7 @@ class FirestoreService {
       'amount': meal.amount,
       'note': meal.note,
       'createdAt': meal.createdAt,
+      'category': meal.category,
     });
   }
 
@@ -41,6 +42,7 @@ class FirestoreService {
                 amount: (data['amount'] as num).toDouble(),
                 note: data['note'],
                 createdAt: (data['createdAt'] as Timestamp).toDate(),
+                category: data['category'], // null for meals logged before this update
               );
             }).toList());
   }
@@ -67,6 +69,7 @@ class FirestoreService {
       'amount': meal.amount,
       'note': meal.note,
       'createdAt': meal.createdAt,
+      'category': meal.category,
     });
   }
 

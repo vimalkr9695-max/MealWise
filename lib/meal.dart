@@ -6,6 +6,8 @@ class Meal {
   final double amount;
   final String note;
   final DateTime createdAt;
+  final String?
+      category; // "Fruits" | "Vegetables" | "Protein" | "Grains" | null (old meals)
 
   Meal({
     required this.id,
@@ -15,9 +17,9 @@ class Meal {
     required this.amount,
     required this.note,
     required this.createdAt,
+    this.category,
   });
 
-  // Convert meal to a Map so we can save it
   Map<String, dynamic> toMap() {
     return {
       'id': id,
@@ -27,10 +29,10 @@ class Meal {
       'amount': amount,
       'note': note,
       'createdAt': createdAt.toIso8601String(),
+      'category': category,
     };
   }
 
-  // Create a Meal from a saved Map
   factory Meal.fromMap(Map<String, dynamic> map) {
     return Meal(
       id: map['id'],
@@ -40,6 +42,7 @@ class Meal {
       amount: map['amount'].toDouble(),
       note: map['note'],
       createdAt: DateTime.parse(map['createdAt']),
+      category: map['category'],
     );
   }
 }

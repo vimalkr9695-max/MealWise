@@ -84,21 +84,22 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-    final screens = [
-      _buildHomeContent(),
-      CalendarPage(allMeals: _allMeals, onDataChanged: _loadData),
-      StatsPage(allMeals: _allMeals, budget: _budget),
-      ProfilePage(
-        allMeals: _allMeals,
-        budget: _budget,
-        userName: _userName,
-        onDataChanged: _loadData,
-      ),
-    ];
-
     return Scaffold(
       backgroundColor: const Color(0xFF0F0F0E),
-      body: screens[_currentIndex],
+      body: IndexedStack(
+        index: _currentIndex,
+        children: [
+          _buildHomeContent(),
+          CalendarPage(allMeals: _allMeals, onDataChanged: _loadData),
+          StatsPage(allMeals: _allMeals, budget: _budget),
+          ProfilePage(
+            allMeals: _allMeals,
+            budget: _budget,
+            userName: _userName,
+            onDataChanged: _loadData,
+          ),
+        ],
+      ),
       bottomNavigationBar: _buildBottomNav(),
     );
   }
@@ -127,7 +128,7 @@ class _HomePageState extends State<HomePage> {
                 const SizedBox(height: 4),
                 Text(
                   _userName,
-                  style: GoogleFonts.playfairDisplay(
+                  style: GoogleFonts.dmSerifDisplay(
                     fontSize: 22,
                     fontWeight: FontWeight.bold,
                     color: const Color(0xFFF0EDE6),
@@ -146,16 +147,14 @@ class _HomePageState extends State<HomePage> {
             const SizedBox(height: 10),
             _buildBudgetCard(monthName),
             const SizedBox(height: 10),
-            Center(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 10),
-                child: Text(
-                  "TODAY'S MEALS",
-                  style: GoogleFonts.dmSans(
-                    fontSize: 10,
-                    color: const Color(0xFF9B9890),
-                    letterSpacing: 1.0,
-                  ),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 10),
+              child: Text(
+                "TODAY'S MEALS",
+                style: GoogleFonts.dmSans(
+                  fontSize: 10,
+                  color: const Color(0xFF9B9890),
+                  letterSpacing: 1.0,
                 ),
               ),
             ),
@@ -250,7 +249,7 @@ class _HomePageState extends State<HomePage> {
                 const SizedBox(height: 4),
                 Text(
                   '₹${_todaySpend.toStringAsFixed(1)}',
-                  style: GoogleFonts.playfairDisplay(
+                  style: GoogleFonts.dmSerifDisplay(
                     fontSize: 34,
                     color: const Color(0xFFD4A853),
                   ),

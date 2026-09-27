@@ -14,6 +14,7 @@ class EditMealPage extends StatefulWidget {
 
 class _EditMealPageState extends State<EditMealPage> {
   late String _selectedType;
+  String? _selectedCategory;
   late TextEditingController _nameController;
   late TextEditingController _locationController;
   late TextEditingController _amountController;
@@ -21,11 +22,13 @@ class _EditMealPageState extends State<EditMealPage> {
   late TimeOfDay _selectedTime;
 
   final List<String> _types = ['Breakfast', 'Lunch', 'Dinner', 'Snack'];
+  final List<String> _categories = ['Fruits', 'Vegetables', 'Protein', 'Grains'];
 
   @override
   void initState() {
     super.initState();
     _selectedType = widget.meal.type;
+    _selectedCategory = widget.meal.category;
     _nameController = TextEditingController(text: widget.meal.name);
     _locationController = TextEditingController(text: widget.meal.location);
     _amountController =
@@ -77,6 +80,17 @@ class _EditMealPageState extends State<EditMealPage> {
       return;
     }
 
+    if (_selectedCategory == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Please select a food category',
+              style: GoogleFonts.dmSans(color: Colors.white)),
+          backgroundColor: const Color(0xFF1A1A18),
+        ),
+      );
+      return;
+    }
+
     final original = widget.meal.createdAt;
     final mealTime = DateTime(
       original.year,
@@ -94,6 +108,7 @@ class _EditMealPageState extends State<EditMealPage> {
       amount: double.tryParse(_amountController.text) ?? 0.0,
       note: _noteController.text.trim(),
       createdAt: mealTime,
+      category: _selectedCategory,
     );
 
     await FirestoreService.updateMeal(updated);
@@ -108,7 +123,7 @@ class _EditMealPageState extends State<EditMealPage> {
       builder: (_) => AlertDialog(
         backgroundColor: const Color(0xFF1A1A18),
         title: Text('Delete Meal',
-            style: GoogleFonts.playfairDisplay(
+            style: GoogleFonts.dmSerifDisplay(
                 color: const Color(0xFFF0EDE6))),
         content: Text('Are you sure you want to delete this meal?',
             style: GoogleFonts.dmSans(color: const Color(0xFF9B9890))),
@@ -169,7 +184,7 @@ class _EditMealPageState extends State<EditMealPage> {
                   ),
                   const SizedBox(width: 11),
                   Text('Edit Meal',
-                      style: GoogleFonts.playfairDisplay(
+                      style: GoogleFonts.dmSerifDisplay(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
                         color: const Color(0xFFF0EDE6),
@@ -207,6 +222,51 @@ class _EditMealPageState extends State<EditMealPage> {
                             child: Text(type,
                                 style: GoogleFonts.dmSans(
                                   fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: active
+                                      ? const Color(0xFFD4A853)
+                                      : const Color(0xFF9B9890),
+                                )),
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+
+              const SizedBox(height: 20),
+
+              _buildLabel('FOOD CATEGORY'),
+              const SizedBox(height: 15),
+              Row(
+                children: _categories.map((category) {
+                  final active = _selectedCategory == category;
+                  return Expanded(
+                    child: Padding(
+                      padding: EdgeInsets.only(
+                          right: category != 'Grains' ? 8 : 0),
+                      child: GestureDetector(
+                        onTap: () =>
+                            setState(() => _selectedCategory = category),
+                        child: Container(
+                          height: 46,
+                          decoration: BoxDecoration(
+                            color: active
+                                ? const Color(0x1FD4A853)
+                                : const Color(0x1F1A1A18),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                              color: active
+                                  ? const Color(0xFFD4A853)
+                                  : const Color(0xFF2E2E2B),
+                            ),
+                          ),
+                          child: Center(
+                            child: Text(category,
+                                textAlign: TextAlign.center,
+                                style: GoogleFonts.dmSans(
+                                  fontSize: 11,
                                   fontWeight: FontWeight.w600,
                                   color: active
                                       ? const Color(0xFFD4A853)
@@ -407,7 +467,7 @@ class _EditMealPageState extends State<EditMealPage> {
       child: TextField(
         controller: _amountController,
         keyboardType: const TextInputType.numberWithOptions(decimal: true),
-        style: GoogleFonts.playfairDisplay(
+        style: GoogleFonts.dmSerifDisplay(
           fontSize: 22,
           fontWeight: FontWeight.bold,
           color: const Color(0xFFD4A853),
@@ -417,7 +477,7 @@ class _EditMealPageState extends State<EditMealPage> {
           hintText: '0.00',
           hintStyle: const TextStyle(color: Color(0xFF5C5A56)),
           prefixText: '₹ ',
-          prefixStyle: GoogleFonts.playfairDisplay(
+          prefixStyle: GoogleFonts.dmSerifDisplay(
             fontSize: 22,
             fontWeight: FontWeight.bold,
             color: const Color(0xFFD4A853),
